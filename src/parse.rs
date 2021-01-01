@@ -6,19 +6,18 @@ use crate::{
 };
 
 pub fn parse(tokens: Vec<Token>) -> Ast {
-    let mut toks = tokens;
-    let mut iter = toks.iter().peekable();
+    let mut iter = tokens.iter().peekable();
     let mut decls: Vec<FuncDecl> = Vec::new();
 
     // parse functions
     loop {
         let peek = iter.peek();
         match peek {
-            Some(t) if is_data_type(t) || t.tok == TokType::KeywordVoid => {
+            Some(t) if (is_data_type(t)) || t.tok == TokType::KeywordVoid => {
                 decls.push(parse_function(&mut iter))
             }
             None => break,
-            _ => panic!("unexpected token: {:?}", peek),
+            Some(t) => panic!("unexpected {}", t),
         }
     }
 
@@ -156,9 +155,37 @@ fn is_peek_tok(iter: &mut Peekable<Iter<Token>>, tok: TokType) -> bool {
 }
 
 fn consume(iter: &mut Peekable<Iter<Token>>, tok: TokType) {
-    let item = iter.next().expect("expected {} but EOF");
+    let item = iter
+        .next()
+        .expect(format!("expected {} but EOF", tok).as_str());
     match item {
         Token { tok: t, loc: _ } if *t == tok => (),
         t => panic!("expected {} but {}", tok, t),
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use test_case::test_case;
+
+    use crate::scan;
+
+    use super::parse;
+
+    #[test_case("int main() { return 1; }")]
+    #[test_case("int main() { }")]
+    #[test_case("void test() { return 1; }")]
+    #[test_case("int main() { int a = 100; return 1; }")]
+    fn pass_program(src: &str) {
+        parse(scan(src));
+    }
+
+    #[test_case("main" => panics "unexpected identifier 'main' at 1:1")]
+    #[test_case("int main" => panics "expected ( but EOF")]
+    #[test_case("int test {" => panics "expected ( but {")]
+    #[test_case("int test() {" => panics "expected } but EOF")]
+    #[test_case("int main() { return 1 }" => panics "expected ; but }")]
+    fn failed_program(src: &str) {
+        parse(scan(src));
     }
 }

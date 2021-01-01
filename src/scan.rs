@@ -3,7 +3,7 @@ use std::str::Chars;
 use crate::common::{TokType, Token};
 
 /// scan the input source code into array of tokens
-pub fn scan(src: &String) -> Vec<Token> {
+pub fn scan(src: &str) -> Vec<Token> {
     let input = ScanInput::from(src.chars());
     input
         .into_iter()
@@ -97,6 +97,7 @@ impl<'a> ScanInput<'a> {
         // keywords have higher priority
         match str.as_str() {
             "int" => TokType::KeywordInt,
+            "void" => TokType::KeywordVoid,
             "return" => TokType::KeywordReturn,
             _ => TokType::ID(str),
         }
@@ -186,5 +187,35 @@ impl<'a> From<Chars<'a>> for ScanInput<'a> {
             line: 1,
             col: 1,
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use test_case::test_case;
+
+    use crate::common::TokType;
+
+    use super::scan;
+
+    #[test_case("int return void main")]
+    #[test_case("1 1.1 0 0.2")]
+    #[test_case("a var1")]
+    #[test_case("int () ( ) {} { } ; =")]
+    fn valid_tokens(src: &str) {
+        assert_eq!(!scan(src).is_empty(), true);
+    }
+
+    #[test_case("int main() { return 1; }")]
+    #[test_case("int main() { int a = 100; return 1; }")]
+    fn valid_program(src: &str) {
+        assert_eq!(!scan(src).is_empty(), true);
+    }
+
+    #[test_case("void", TokType::KeywordVoid)]
+    #[test_case("voida", TokType::ID(String::from("voida")))]
+    fn single_token(src: &str, tok: TokType) {
+        let toks = scan(src);
+        assert_eq!(toks.first().unwrap().tok, tok);
     }
 }

@@ -36,6 +36,19 @@ impl Display for Token {
 
 impl Display for TokType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self)
+        let s: &str = match self {
+            TokType::KeywordVoid => "void",
+            TokType::KeywordInt => "int",
+            TokType::KeywordReturn => "return",
+            TokType::ParentOpen => "(",
+            TokType::ParentClose => ")",
+            TokType::BracketOpen => "{",
+            TokType::BracketClose => "}",
+            TokType::Assign => "=",
+            TokType::Semicolon => ";",
+            TokType::ID(id) => return write!(f, "identifier '{}'", id),
+            _ => return write!(f, "{:?}", self),
+        };
+        write!(f, "{}", s)
     }
 }
