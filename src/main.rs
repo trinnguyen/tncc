@@ -5,17 +5,24 @@
 #[macro_use]
 extern crate log;
 
-use std::fs;
+use std::{fs, path::PathBuf};
+use std::{fs::File, io::prelude::*};
 
 use clap::{App, Arg};
+use codegen::gen_asm;
 use env_logger::{Builder, Env};
 use parse::parse;
 use scan::scan;
+use semantics::analyse;
+use util::new_output_asm;
 
 mod ast;
+mod codegen;
 mod common;
 mod parse;
 mod scan;
+mod semantics;
+mod util;
 
 fn main() {
     let opts = parse_opts();
@@ -48,12 +55,41 @@ fn main() {
 /// phases: scanning -> parsing -> semantics analysis -> code generation (ARM ASM)
 fn exec_cc1(opts: &Opts) {
     info!("execute core cc1");
-    opts.files.iter().for_each(|f| {
+    for f in &opts.files {
         let contents = fs::read_to_string(f).unwrap();
+
+        // scan to tokens
+        debug!("start scanning...");
         let toks = scan(&contents);
-        let ast = parse(toks);
-        debug!("{:#?}", ast)
-    })
+
+        // parse to ast
+        debug!("start parsing...");
+        let mut ast = parse(toks);
+        debug!("{:#?}", ast);
+
+        // semantics analysis and type checking
+        debug!("start semantics analysis");
+        analyse(&mut ast);
+
+        // generate asm
+        debug!("start code generation...");
+        let asm = gen_asm(&ast);
+        debug!("{}", asm);
+
+        // write to output
+        write_asm_file(&asm, &opts.output, f);
+        info!("finished generating ARM assembly");
+    }
+}
+
+fn write_asm_file(asm: &String, output: &Option<PathBuf>, f: &PathBuf) {
+    let mut fout = match &output {
+        Some(p) => File::create(p),
+        _ => File::create(new_output_asm(f)),
+    }
+    .unwrap();
+
+    fout.write_all(asm.as_bytes()).expect("wrote asm to file");
 }
 
 /// use system assembler (GNU as) to assemble asm code to object code
@@ -68,16 +104,18 @@ fn run_linker(opts: &Opts) {
     // TODO implement
 }
 
-fn ensure_input_exist(files: &[String]) {
+fn ensure_input_exist(files: &[PathBuf]) {
     files.iter().for_each(|f| {
-        let _ = fs::metadata(f).expect(format!("invalid input file: {}", f).as_str());
+        if !f.is_file() {
+            panic!("invalid input file '{}'", f.to_str().unwrap())
+        }
     });
 }
 
 #[derive(Debug, Default)]
 struct Opts {
-    files: Vec<String>,
-    output: String,
+    files: Vec<PathBuf>,
+    output: Option<PathBuf>,
     compile_only: bool,
     complie_as_only: bool,
     debug: bool,
@@ -89,19 +127,20 @@ fn parse_opts() -> Opts {
     let args = app.get_matches();
 
     // load options
+    let out = match args.value_of("output") {
+        Some(v) => Some(PathBuf::from(v.to_string())),
+        _ => None,
+    };
     Opts {
         compile_only: args.is_present("arg-S"),
         complie_as_only: args.is_present("arg-c"),
         debug: args.is_present("debug"),
         verbose: args.is_present("verbose"),
-        output: args
-            .value_of("output")
-            .unwrap_or_else(|| "a.out")
-            .to_string(),
+        output: out,
         files: args
             .values_of("input")
             .unwrap()
-            .map(|v| v.to_string())
+            .map(|v| PathBuf::from(v))
             .collect(),
     }
 }
@@ -147,7 +186,6 @@ fn create_arg_app() -> App<'static> {
 }
 
 fn init_logger(opts: &Opts) {
-    use std::io::Write;
     let level = if opts.debug {
         "debug"
     } else if opts.verbose {

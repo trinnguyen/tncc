@@ -14,7 +14,7 @@ pub struct FuncDecl {
     pub cmp_stmt: CmpStmt,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum ReturnType {
     Void,
     Data(DataType),
@@ -36,7 +36,7 @@ pub struct CmpStmt {
 pub enum Stmt {
     VarDecl(DataType, String, Option<Expr>),
     Assignment(String, Expr),
-    Return(Expr),
+    Return(Option<Expr>),
 }
 
 #[derive(Debug)]
@@ -51,7 +51,7 @@ pub enum ArithOp {
     Sub,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum DataType {
     Int,
     Float,

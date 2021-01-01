@@ -91,19 +91,34 @@ fn parse_var_decl_stmt(iter: &mut Peekable<Iter<Token>>) -> Stmt {
 
 fn parse_return_stmt(iter: &mut Peekable<Iter<Token>>) -> Stmt {
     consume(iter, TokType::KeywordReturn);
-    let expr: Expr = parse_expr(iter);
+    let expr: Option<Expr> = if is_expr(iter) {
+        Some(parse_expr(iter))
+    } else {
+        None
+    };
     consume(iter, TokType::Semicolon);
     Stmt::Return(expr)
 }
 
-fn parse_expr(iter: &mut Peekable<Iter<Token>>) -> Expr {
+fn is_expr(iter: &mut Peekable<Iter<Token>>) -> bool {
+    is_int_const_expr(iter)
+}
+
+fn is_int_const_expr(iter: &mut Peekable<Iter<Token>>) -> bool {
     match iter.peek() {
         Some(Token {
             tok: TokType::NumInt(_),
             loc: _,
-        }) => parse_int_const_expr(iter),
-        Some(t) => panic!("exepcted expression but {}", t),
-        None => panic!("unexpected EOF"),
+        }) => true,
+        _ => false,
+    }
+}
+
+fn parse_expr(iter: &mut Peekable<Iter<Token>>) -> Expr {
+    if is_int_const_expr(iter) {
+        parse_int_const_expr(iter)
+    } else {
+        panic!("expected expression but {:?}", iter.peek())
     }
 }
 
@@ -113,7 +128,7 @@ fn parse_int_const_expr(iter: &mut Peekable<Iter<Token>>) -> Expr {
             tok: TokType::NumInt(v),
             loc: _,
         }) => Expr::IntConst(*v as i64),
-        Some(t) => panic!("expected int const but {}", t),
+        Some(t) => panic!("expected int constant but {}", t),
         None => panic!("unexpected EOF"),
     }
 }
