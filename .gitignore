@@ -19,3 +19,4 @@ Cargo.lock
 .antlr
 a.out
 *.s
+*.log

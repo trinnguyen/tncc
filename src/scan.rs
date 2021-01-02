@@ -7,10 +7,6 @@ pub fn scan(src: &str) -> Vec<Token> {
     let input = ScanInput::from(src.chars());
     input
         .into_iter()
-        .map(|t| {
-            debug!("{}", t);
-            t
-        })
         .collect()
 }
 
