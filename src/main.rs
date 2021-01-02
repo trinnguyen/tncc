@@ -14,7 +14,7 @@ use env_logger::{Builder, Env};
 use parse::parse;
 use scan::scan;
 use semantics::analyse;
-use util::new_output_asm;
+use util::*;
 
 mod ast;
 mod codegen;
@@ -32,12 +32,16 @@ fn main() {
     ensure_input_exist(&opts.files);
 
     // always execute front-end to emit asm
-    exec_cc1(&opts);
+    let target = TargetOs::current();
+    exec_cc1(&opts, &target);
 
     // stop if -S
     if opts.compile_only {
         return;
     }
+
+    // check arch
+    check_target(&target);
 
     // run assembler
     run_assembler(&opts);
@@ -53,7 +57,7 @@ fn main() {
 
 /// compiler front-end to emit assembly code
 /// phases: scanning -> parsing -> semantics analysis -> code generation (ARM ASM)
-fn exec_cc1(opts: &Opts) {
+fn exec_cc1(opts: &Opts, target: &TargetOs) {
     info!("execute core cc1");
     for f in &opts.files {
         let contents = fs::read_to_string(f).unwrap();
@@ -73,7 +77,7 @@ fn exec_cc1(opts: &Opts) {
 
         // generate asm
         debug!("start code generation...");
-        let asm = gen_asm(&ast);
+        let asm = gen_asm(&ast, target);
         debug!("{}", asm);
 
         // write to output
@@ -95,13 +99,21 @@ fn write_asm_file(asm: &String, output: &Option<PathBuf>, f: &PathBuf) {
 /// use system assembler (GNU as) to assemble asm code to object code
 fn run_assembler(opts: &Opts) {
     info!("invoke assembler")
-    // TODO implement
 }
 
 /// use system linker (GNU ld) to link object code to machine code (ELF)
 fn run_linker(opts: &Opts) {
     info!("invoke linker")
     // TODO implement
+}
+
+/// support macos arm and linux arm only
+fn check_target(target: &TargetOs) {
+    match (target, util::is_aarch64()) {
+        (TargetOs::MacOs, true) => (),
+        (TargetOs::Linux, true) => (),
+        (os, _) => panic!("Current OS ({:?}) and arch is not yet supported, try macos or linux or aarch64 instead", os)
+    }
 }
 
 fn ensure_input_exist(files: &[PathBuf]) {

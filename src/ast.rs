@@ -1,5 +1,7 @@
 //! Data structure for abstract syntax tree
 
+use crate::util::TargetOs;
+
 /// Abstract syntax tree parsed from source
 #[derive(Debug)]
 pub struct Ast {
@@ -12,6 +14,15 @@ pub struct FuncDecl {
     pub name: String,
     pub params: Vec<ParamDecl>,
     pub cmp_stmt: CmpStmt,
+}
+
+impl FuncDecl {
+    pub fn symbol_name(&self, target: &TargetOs) -> String {
+        match target {
+            TargetOs::MacOs => format!("_{}", self.name),
+            _ => self.name.clone()
+        }
+    }
 }
 
 #[derive(Debug, PartialEq)]

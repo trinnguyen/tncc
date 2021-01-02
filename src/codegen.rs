@@ -1,9 +1,9 @@
 //! Generate ARM assembly from AST
 
-use crate::ast::{Ast, CmpStmt, Expr, FuncDecl, ReturnType, Stmt};
+use crate::{ast::{Ast, CmpStmt, Expr, FuncDecl, ReturnType, Stmt}, util::TargetOs};
 
-pub fn gen_asm(ast: &Ast) -> String {
-    let mut g = ArmGen::from(ast);
+pub fn gen_asm(ast: &Ast, target: &TargetOs) -> String {
+    let mut g = ArmGen::new(ast, target);
     g.gen();
     g.str
 }
@@ -11,18 +11,19 @@ pub fn gen_asm(ast: &Ast) -> String {
 struct ArmGen<'a> {
     ast: &'a Ast,
     str: String,
-}
-
-impl<'a> From<&'a Ast> for ArmGen<'a> {
-    fn from(ast: &'a Ast) -> Self {
-        ArmGen {
-            ast,
-            str: String::new(),
-        }
-    }
+    target: TargetOs
 }
 
 impl<'a> ArmGen<'a> {
+    /// create new arm
+    fn new(ast: &'a Ast, target: &TargetOs) -> Self {
+        ArmGen {
+            ast,
+            str: String::new(),
+            target: *target
+        }
+    }
+
     /// generate ARM assembly for the AST
     fn gen(&mut self) {
         let begin = ".text";
@@ -32,8 +33,9 @@ impl<'a> ArmGen<'a> {
 
     fn gen_func(&mut self, func: &FuncDecl) {
         // decl
-        self.pushln_tab(format!(".global {}", func.name));
-        self.pushln(format!("{}:", func.name));
+        self.pushln_tab(format!(".global {}", func.symbol_name(&self.target)));
+        self.pushln_tab_str(".p2align 2");
+        self.pushln(format!("{}:", func.symbol_name(&self.target)));
 
         // body with statement
         self.emit_cmp_stmt(&func.cmp_stmt);
@@ -97,14 +99,26 @@ impl<'a> Render for ArmGen<'a> {
 
 #[cfg(test)]
 mod test {
-    use crate::{parse, scan};
+    use crate::{parse, scan, util::TargetOs};
 
     use super::gen_asm;
 
     #[test]
-    fn expect_header() {
-        let v = gen_asm(&parse(scan("int main(){return 1;}")));
-        vec![".text", ".global main", "main:", "mov x0, #1", "ret"]
+    fn expect_header_linux() {
+        let v = gen_asm(&parse(scan("int main(){return 1;}")), &TargetOs::Linux);
+        vec![".text", ".global main", "main:", ".p2align 2", "mov x0, #1", "ret"]
+            .iter()
+            .for_each(|i| {
+                if !v.contains(i) {
+                    panic!("'{}' is not generated", i)
+                }
+            });
+    }
+
+    #[test]
+    fn expect_header_macos() {
+        let v = gen_asm(&parse(scan("int main(){return 1;}")), &TargetOs::MacOs);
+        vec![".text", ".global _main", ".p2align 2", "_main:", "mov x0, #1", "ret"]
             .iter()
             .for_each(|i| {
                 if !v.contains(i) {

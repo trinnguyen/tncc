@@ -1,6 +1,4 @@
 use std::{
-    env::temp_dir,
-    ffi::OsStr,
     path::{Path, PathBuf},
 };
 
@@ -22,6 +20,27 @@ pub fn new_output_obj(path: &Path) -> PathBuf {
 /// output executable file with using the basename only
 pub fn new_output_executable(path: &Path) -> PathBuf {
     get_basename(path)
+}
+
+pub fn is_aarch64() -> bool {
+    std::env::consts::ARCH == "aarch64"
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum TargetOs {
+    MacOs,
+    Linux,
+    Other
+}
+
+impl TargetOs {
+    pub fn current() -> Self {
+        match std::env::consts::OS {
+            "macos" => TargetOs::MacOs,
+            "linux" => TargetOs::Linux,
+            t => TargetOs::Other,
+        }
+    }
 }
 
 #[cfg(test)]
