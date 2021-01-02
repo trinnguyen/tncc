@@ -5,11 +5,7 @@
 #[macro_use]
 extern crate log;
 
-use std::{
-    fs,
-    path::PathBuf,
-    process::Command,
-};
+use std::{fs, path::PathBuf, process::Command};
 use std::{fs::File, io::prelude::*};
 
 use clap::{App, Arg};
@@ -163,6 +159,12 @@ fn run_linker(opts: &Opts, paths: &[PathBuf]) -> PathBuf {
         .arg("-syslibroot")
         .arg("/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk")
         .arg("-lSystem");
+    } else {
+        cmd.arg("/usr/aarch64-linux-gnu/lib/crt1.o")
+            .arg("/usr/aarch64-linux-gnu/lib/crti.o")
+            .arg("/usr/aarch64-linux-gnu/lib/crtn.o")
+            .arg("-L/usr/aarch64-linux-gnu/lib")
+            .arg("-lc");
     }
 
     // execute
@@ -185,7 +187,11 @@ fn check_target(target: &TargetOs) {
     match (target, util::is_aarch64()) {
         (TargetOs::MacOs, true) => (),
         (TargetOs::Linux, true) => (),
-        (os, _) => panic!("Current OS ({:?}) and arch is not yet supported, try macos or linux or aarch64 instead", os)
+        (os, _) => panic!(
+            "{:?} ({}) is not yet supported, try macos or linux (aarch64) instead",
+            os,
+            std::env::consts::ARCH
+        ),
     }
 }
 

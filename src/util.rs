@@ -1,4 +1,7 @@
-use std::{ffi::OsStr, path::{Path, PathBuf}};
+use std::{
+    ffi::OsStr,
+    path::{Path, PathBuf},
+};
 
 /// path to new asm file
 pub fn new_output_asm(path: &PathBuf, is_temp: bool) -> PathBuf {
