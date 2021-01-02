@@ -20,3 +20,4 @@ Cargo.lock
 a.out
 *.s
 *.log
+.native

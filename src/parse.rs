@@ -38,8 +38,9 @@ fn parse_function(iter: &mut Peekable<Iter<Token>>) -> FuncDecl {
 
     let name = parse_id(iter);
 
-    // TODO parse parameters
+    // parameters
     consume(iter, TokType::ParentOpen);
+    let params = parse_parameters(iter);
     consume(iter, TokType::ParentClose);
 
     // compound statement
@@ -48,8 +49,42 @@ fn parse_function(iter: &mut Peekable<Iter<Token>>) -> FuncDecl {
     FuncDecl {
         return_type,
         name,
-        params: Vec::new(),
+        params,
         cmp_stmt,
+    }
+}
+
+fn parse_parameters(iter: &mut Peekable<Iter<Token>>) -> Vec<ParamDecl> {
+    let mut vec: Vec<ParamDecl> = Vec::new();
+    match iter.peek() {
+        Some(t) if is_data_type(t) => {
+            vec.push(parse_parameter(iter));
+
+            // check if comma
+            loop {
+                match iter.peek() {
+                    Some(t) if t.tok == TokType::Comma => {
+                        consume_any(iter);
+                        vec.push(parse_parameter(iter));
+                    }
+                    _ => break,
+                }
+            }
+        }
+        _ => (),
+    }
+
+    vec
+}
+
+fn parse_parameter(iter: &mut Peekable<Iter<Token>>) -> ParamDecl {
+    let tp = match iter.next() {
+        Some(t) => parse_data_type(t).expect("expected data type"),
+        _ => panic!("unexpected EOF"),
+    };
+    ParamDecl {
+        data_type: tp,
+        name: parse_id(iter),
     }
 }
 
@@ -60,12 +95,16 @@ fn parse_compound_stmt(iter: &mut Peekable<Iter<Token>>) -> CmpStmt {
 
     // parse stmts
     loop {
-        let stmt: Stmt = match iter.peek() {
-            Some(t) if is_data_type(t) => parse_var_decl_stmt(iter),
-            Some(t) if t.tok == TokType::KeywordReturn => parse_return_stmt(iter),
-            Some(t) if t.tok == TokType::BracketClose => break,
-            Some(t) => panic!("unexpected {}", t),
-            None => break,
+        let stmt: Stmt = if is_expr(iter) {
+            parse_expr_stmt(iter)
+        } else { 
+            match iter.peek() {
+                Some(t) if is_data_type(t) => parse_var_decl_stmt(iter),
+                Some(t) if t.tok == TokType::KeywordReturn => parse_return_stmt(iter),
+                Some(t) if t.tok == TokType::BracketClose => break,
+                Some(t) => panic!("unexpected {}", t),
+                _ => break,
+            }
         };
 
         stmts.push(stmt);
@@ -100,8 +139,25 @@ fn parse_return_stmt(iter: &mut Peekable<Iter<Token>>) -> Stmt {
     Stmt::Return(expr)
 }
 
+/// statement that invoke an expression, i.e function call
+fn parse_expr_stmt(iter: &mut Peekable<Iter<Token>>) -> Stmt {
+    let e = parse_expr(iter);
+    consume(iter, TokType::Semicolon);
+    Stmt::Expr(e)
+}
+
 fn is_expr(iter: &mut Peekable<Iter<Token>>) -> bool {
-    is_int_const_expr(iter)
+    is_int_const_expr(iter) || is_ref(iter)
+}
+
+fn parse_expr(iter: &mut Peekable<Iter<Token>>) -> Expr {
+    if is_int_const_expr(iter) {
+        parse_int_const_expr(iter)
+    } else if is_ref(iter) {
+        parse_ref_expr(iter)
+    } else {
+        panic!("expected expression but {:?}", iter.peek())
+    }
 }
 
 fn is_int_const_expr(iter: &mut Peekable<Iter<Token>>) -> bool {
@@ -114,14 +170,6 @@ fn is_int_const_expr(iter: &mut Peekable<Iter<Token>>) -> bool {
     }
 }
 
-fn parse_expr(iter: &mut Peekable<Iter<Token>>) -> Expr {
-    if is_int_const_expr(iter) {
-        parse_int_const_expr(iter)
-    } else {
-        panic!("expected expression but {:?}", iter.peek())
-    }
-}
-
 fn parse_int_const_expr(iter: &mut Peekable<Iter<Token>>) -> Expr {
     match iter.next() {
         Some(Token {
@@ -130,6 +178,52 @@ fn parse_int_const_expr(iter: &mut Peekable<Iter<Token>>) -> Expr {
         }) => Expr::IntConst(*v as i64),
         Some(t) => panic!("expected int constant but {}", t),
         None => panic!("unexpected EOF"),
+    }
+}
+
+fn is_ref(iter: &mut Peekable<Iter<Token>>) -> bool {
+    match iter.peek() {
+        Some(Token {
+            tok: TokType::ID(_),
+            loc: _,
+        }) => true,
+        _ => false,
+    }
+}
+
+/// parse function or variable call
+///
+/// TODO parse array index
+fn parse_ref_expr(iter: &mut Peekable<Iter<Token>>) -> Expr {
+    let name = parse_id(iter);
+    match iter.peek() {
+        Some(t) if t.tok == TokType::ParentOpen => parse_function_call_expr(iter, name),
+        _ => Expr::VarRef(name)
+    }
+}
+
+fn parse_function_call_expr(iter: &mut Peekable<Iter<Token>>, name: String) -> Expr {
+    consume(iter, TokType::ParentOpen);
+    let args = parse_arguments(iter);
+    consume(iter, TokType::ParentClose);
+    Expr::FunctionCall(name, args)
+}
+
+fn parse_arguments(iter: &mut Peekable<Iter<Token>>) -> Vec<Expr> {
+    if is_expr(iter) {
+        let mut vec: Vec<Expr> = Vec::new();
+        vec.push(parse_expr(iter));
+        loop {
+            if is_peek_tok(iter, TokType::Comma) {
+                consume_any(iter);
+                vec.push(parse_expr(iter));
+            } else {
+                break
+            }
+        }
+        vec
+    } else {
+        Vec::with_capacity(0)
     }
 }
 
@@ -169,6 +263,10 @@ fn is_peek_tok(iter: &mut Peekable<Iter<Token>>, tok: TokType) -> bool {
     }
 }
 
+fn consume_any(iter: &mut Peekable<Iter<Token>>) {
+    let _ = iter.next();
+}
+
 fn consume(iter: &mut Peekable<Iter<Token>>, tok: TokType) {
     let item = iter
         .next()
@@ -177,6 +275,12 @@ fn consume(iter: &mut Peekable<Iter<Token>>, tok: TokType) {
         Token { tok: t, loc: _ } if *t == tok => (),
         t => panic!("expected {} but {}", tok, t),
     }
+}
+
+enum ExprRefType {
+    FunctionCall,
+    ArrayIndex,
+    VarRef,
 }
 
 #[cfg(test)]
@@ -191,6 +295,10 @@ mod test {
     #[test_case("int main() { }")]
     #[test_case("void test() { return 1; }")]
     #[test_case("int main() { int a = 100; return 1; }")]
+    #[test_case("void test() { int a = 3; return a; }")]
+    #[test_case("void foo(int x, int y) {}")]
+    #[test_case("void foo() { int a = undefined(x, 3); }")]
+    #[test_case("void foo() { undefined(3); }")]
     fn pass_program(src: &str) {
         parse(scan(src));
     }

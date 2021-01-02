@@ -51,6 +51,7 @@ impl<'a> ScanInput<'a> {
                     '-' => TokType::Minus,
                     '+' => TokType::Plus,
                     '=' => TokType::Assign,
+                    ',' => TokType::Comma,
                     t if t.is_ascii_alphabetic() => self.scan_keyword_or_id(t),
                     t if t.is_ascii_digit() => self.scan_num(t),
                     t => panic!("unexpected char: {}", t),

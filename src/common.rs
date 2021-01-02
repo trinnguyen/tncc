@@ -26,6 +26,7 @@ pub enum TokType {
     Minus,         // -
     Plus,          // +
     Assign,        // =
+    Comma,        // ,
 }
 
 impl Display for Token {
@@ -46,6 +47,7 @@ impl Display for TokType {
             TokType::BracketClose => "}",
             TokType::Assign => "=",
             TokType::Semicolon => ";",
+            TokType::Comma => ",",
             TokType::ID(id) => return write!(f, "identifier '{}'", id),
             _ => return write!(f, "{:?}", self),
         };

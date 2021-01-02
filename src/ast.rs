@@ -33,8 +33,8 @@ pub enum ReturnType {
 
 #[derive(Debug)]
 pub struct ParamDecl {
-    data_type: DataType,
-    name: String,
+    pub data_type: DataType,
+    pub name: String,
 }
 
 /// Compound statement
@@ -48,11 +48,14 @@ pub enum Stmt {
     VarDecl(DataType, String, Option<Expr>),
     Assignment(String, Expr),
     Return(Option<Expr>),
+    Expr(Expr)
 }
 
 #[derive(Debug)]
 pub enum Expr {
     IntConst(i64),
+    FunctionCall(String, Vec<Expr>),
+    VarRef(String),
     Arith(Box<Expr>, ArithOp, Box<Expr>),
 }
 
