@@ -81,7 +81,7 @@ fn exec_cc1(opts: &Opts) -> Vec<PathBuf> {
             // generate asm
             debug!("start code generation...");
             let asm = gen_asm(&ast, &opts.target);
-            debug!("{}", asm);
+            debug!("\n{}", asm);
 
             // write to output
             write_asm_file(&asm, opts, f)

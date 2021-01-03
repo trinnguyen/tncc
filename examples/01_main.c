@@ -1,4 +1,3 @@
 int main() {
-    int a = 100;
-    return 1;
+    return 0;
 }

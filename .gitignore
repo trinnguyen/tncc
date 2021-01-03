@@ -21,3 +21,4 @@ a.out
 *.s
 *.log
 .native
+*.dSYM
