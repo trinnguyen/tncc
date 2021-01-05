@@ -22,6 +22,7 @@ mod common;
 mod parse;
 mod scan;
 mod semantics;
+mod symtable;
 mod util;
 
 fn main() {

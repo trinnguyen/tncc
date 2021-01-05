@@ -7,7 +7,7 @@ pub struct Ast(pub Vec<ExtDecl>);
 #[derive(Debug)]
 pub enum ExtDecl {
     Func(FuncDecl),
-    Global(VarDecl),
+    Global(GlobalVarDecl),
 }
 
 #[derive(Debug)]
@@ -49,6 +49,9 @@ pub enum Expr {
 
 #[derive(Debug)]
 pub struct VarDecl(pub DataType, pub String, pub Option<Expr>);
+
+#[derive(Debug)]
+pub struct GlobalVarDecl(pub DataType, pub String, pub Option<Expr>);
 
 #[derive(Debug)]
 pub enum ArithOp {

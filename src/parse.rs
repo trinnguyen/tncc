@@ -36,7 +36,7 @@ pub fn parse(tokens: Vec<Token>) -> Ast {
                             _ => None,
                         };
                         consume(&mut iter, TokType::Semicolon);
-                        ExtDecl::Global(VarDecl(return_type, name, expr))
+                        ExtDecl::Global(GlobalVarDecl(return_type, name, expr))
                     }
                 };
                 ast.0.push(ext);
@@ -49,6 +49,8 @@ pub fn parse(tokens: Vec<Token>) -> Ast {
     ast
 }
 
+/// parse type and name
+/// example: int main
 fn parse_declator(iter: &mut Peekable<Iter<Token>>) -> (DataType, String) {
     let dt = iter
         .next()
@@ -57,6 +59,7 @@ fn parse_declator(iter: &mut Peekable<Iter<Token>>) -> (DataType, String) {
     (dt, parse_id(iter))
 }
 
+/// parse function parameters and body (compound statement)
 fn parse_func_params_body(iter: &mut Peekable<Iter<Token>>) -> (Vec<ParamDecl>, CmpStmt) {
     // parameters
     consume(iter, TokType::ParentOpen);
@@ -69,6 +72,7 @@ fn parse_func_params_body(iter: &mut Peekable<Iter<Token>>) -> (Vec<ParamDecl>, 
     (params, cmp_stmt)
 }
 
+/// parse list of parameters
 fn parse_parameters(iter: &mut Peekable<Iter<Token>>) -> Vec<ParamDecl> {
     let mut vec: Vec<ParamDecl> = Vec::new();
     match iter.peek() {
