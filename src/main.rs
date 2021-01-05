@@ -160,10 +160,10 @@ fn run_linker(opts: &Opts, paths: &[PathBuf]) -> PathBuf {
         .arg("/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk")
         .arg("-lSystem");
     } else {
-        cmd.arg("/usr/aarch64-linux-gnu/lib/crt1.o")
-            .arg("/usr/aarch64-linux-gnu/lib/crti.o")
-            .arg("/usr/aarch64-linux-gnu/lib/crtn.o")
-            .arg("-L/usr/aarch64-linux-gnu/lib")
+        cmd.arg("/usr/lib/aarch64-linux-gnu/crt1.o")
+            .arg("/usr/lib/aarch64-linux-gnu/crti.o")
+            .arg("/usr/lib/aarch64-linux-gnu/crtn.o")
+            .arg("-L/usr/lib/aarch64-linux-gnu")
             .arg("-lc");
     }
 
