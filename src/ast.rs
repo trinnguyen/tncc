@@ -2,22 +2,20 @@
 
 /// Abstract syntax tree parsed from source
 #[derive(Debug)]
-pub struct Ast {
-    pub func_decls: Vec<FuncDecl>,
+pub struct Ast(pub Vec<ExtDecl>);
+
+#[derive(Debug)]
+pub enum ExtDecl {
+    Func(FuncDecl),
+    Global(VarDecl),
 }
 
 #[derive(Debug)]
 pub struct FuncDecl {
-    pub return_type: ReturnType,
+    pub return_type: DataType,
     pub name: String,
     pub params: Vec<ParamDecl>,
     pub cmp_stmt: CmpStmt,
-}
-
-#[derive(Debug, PartialEq)]
-pub enum ReturnType {
-    Void,
-    Data(DataType),
 }
 
 #[derive(Debug)]
@@ -34,10 +32,11 @@ pub struct CmpStmt {
 
 #[derive(Debug)]
 pub enum Stmt {
-    VarDecl(DataType, String, Option<Expr>),
+    Compound(CmpStmt),
+    VarDecl(VarDecl),
     Assignment(String, Expr),
     Return(Option<Expr>),
-    Expr(Expr)
+    Expr(Expr),
 }
 
 #[derive(Debug)]
@@ -49,6 +48,9 @@ pub enum Expr {
 }
 
 #[derive(Debug)]
+pub struct VarDecl(pub DataType, pub String, pub Option<Expr>);
+
+#[derive(Debug)]
 pub enum ArithOp {
     Add,
     Sub,
@@ -56,6 +58,11 @@ pub enum ArithOp {
 
 #[derive(Debug, PartialEq)]
 pub enum DataType {
+    Void,
+    Char,
+    Short,
     Int,
+    Long,
     Float,
+    Double,
 }

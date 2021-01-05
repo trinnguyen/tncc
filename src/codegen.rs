@@ -1,17 +1,37 @@
 //! Generate ARM assembly from AST
 
-use crate::{
-    ast::{Ast, CmpStmt, DataType, Expr, FuncDecl, ReturnType, Stmt},
-    util::TargetOs,
-};
+use std::fmt::Display;
+
+use crate::{ast::*, util::TargetOs};
 
 /// register for frame pointer      
-const FP: &str = "x29";
+const FP: Reg = Reg::X29;
 
 /// register for link pointer
-const LP: &str = "x30";
+const LP: Reg = Reg::X30;
 
-static ARG_REGS: &'static [&str] = &["x0", "x1", "x2", "x3", "x4", "x5", "x6", "x7"];
+/// registers for arguments
+static ARG_REGS: &[Reg] = &[
+    Reg::X0,
+    Reg::X1,
+    Reg::X2,
+    Reg::X3,
+    Reg::X4,
+    Reg::X5,
+    Reg::X6,
+    Reg::X7,
+];
+
+/// registers for local variables
+static TEMP_REGS: &[Reg] = &[
+    Reg::X9,
+    Reg::X10,
+    Reg::X11,
+    Reg::X12,
+    Reg::X13,
+    Reg::X14,
+    Reg::X15,
+];
 
 pub fn gen_asm(ast: &Ast, target: &TargetOs) -> String {
     let mut g = ArmGen::new(ast, target);
@@ -39,10 +59,16 @@ impl<'a> ArmGen<'a> {
     fn gen(&mut self) {
         let begin = ".text";
         self.ptab(begin);
-        self.ast.func_decls.iter().for_each(|f| self.gen_func(f));
+        self.ast.0.iter().for_each(|ext| match ext {
+            ExtDecl::Func(f) => self.gen_func(f),
+            ExtDecl::Global(g) => {}
+        });
     }
 
     fn gen_func(&mut self, func: &FuncDecl) {
+        // pre computation
+        debug!("gen function: {}", func.name);
+
         // decl
         self.ptab(&format!(".global {}", self.to_symbol(&func.name)));
         self.ptab(".p2align 2");
@@ -94,7 +120,7 @@ impl<'a> ArmGen<'a> {
         match stmt {
             Stmt::Return(opt) => {
                 if let Some(expr) = opt {
-                    self.emit_expr(expr, Some("x0"));
+                    self.emit_expr(expr, Some(Reg::X0));
                 }
                 // ret inst is emitted by the function
             }
@@ -104,10 +130,10 @@ impl<'a> ArmGen<'a> {
     }
 
     /// emit expression and return value to reg
-    fn emit_expr(&mut self, expr: &Expr, dst_reg: Option<&str>) {
+    fn emit_expr(&mut self, expr: &Expr, dst_reg: Option<Reg>) {
         match expr {
             Expr::IntConst(v) => {
-                self.util_move_reg(dst_reg, &format!("#{}", v));
+                dst_reg.map(|r| self.ptab(&format!("mov {}, #{}", r, v)));
             }
             Expr::FunctionCall(name, args) => {
                 // push fp, lr
@@ -132,16 +158,16 @@ impl<'a> ArmGen<'a> {
                 self.ptab(&format!("ldp {}, {}, [sp], #16", FP, LP));
 
                 // return value (in x0) to reg
-                self.util_move_reg(dst_reg, "x0");
+                self.util_move_reg(dst_reg, Reg::X0);
             }
             _ => panic!("not supported: {:?}", expr),
         }
     }
 
     /// util move to reg with optimization
-    fn util_move_reg(&mut self, dst: Option<&str>, src: &str) {
+    fn util_move_reg(&mut self, dst: Option<Reg>, src: Reg) {
         dst.map(|r| {
-            if r != src {
+            if src != r {
                 self.ptab(&format!("mov {}, {}", r, src))
             }
         });
@@ -202,6 +228,35 @@ mod gen_util {
     }
 }
 
+/// register
+#[derive(Debug, PartialEq, PartialOrd, Clone, Copy)]
+enum Reg {
+    X0,
+    X1,
+    X2,
+    X3,
+    X4,
+    X5,
+    X6,
+    X7,
+    X9,
+    X10,
+    X11,
+    X12,
+    X13,
+    X14,
+    X15,
+    X29,
+    X30,
+}
+
+impl Display for Reg {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let name = format!("{:?}", self);
+        write!(f, "{}", name.to_lowercase())
+    }
+}
+
 #[cfg(test)]
 mod test {
     use crate::{parse, scan, util::TargetOs};
@@ -237,7 +292,6 @@ mod test {
         "mov x0, #1",
         "ret",
     ])]
-
     // function with arguments
     #[test_case("int foo(int x, int y) {}", vec![
         "sub sp, sp, #16",
@@ -246,7 +300,6 @@ mod test {
         "add sp, sp, #16",
         "ret",
     ])]
-
     // function call
     #[test_case("int foo(int x, int y) {} int main() { return foo(3,4);}", vec![
         "stp x29, x30, [sp, #-16]!",
