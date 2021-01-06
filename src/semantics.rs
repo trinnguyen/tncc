@@ -46,3 +46,6 @@ pub fn analyse_cmp_stmt<'a>(table: &mut SymTable<'a>, cmp_stmt: &'a CmpStmt) {
     // pop scope
     table.pop_scope();
 }
+
+#[cfg(test)]
+mod test {}
