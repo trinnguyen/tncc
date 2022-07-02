@@ -251,36 +251,36 @@ fn create_arg_app() -> App<'static> {
         .arg(
             Arg::new("arg-S")
                 .short('S')
-                .about("Emit assembly only; do not run assembler or linker"),
+                .help("Emit assembly only; do not run assembler or linker"),
         )
         .arg(
             Arg::new("arg-c")
                 .short('c')
-                .about("Emit assembly and run assembler; do not run linker"),
+                .help("Emit assembly and run assembler; do not run linker"),
         )
         .arg(
             Arg::new("output")
                 .short('o')
                 .value_name("file")
-                .about("Output path"),
+                .help("Output path"),
         )
         .arg(
             Arg::new("verbose")
                 .long("verbose")
                 .short('v')
-                .about("print verbose logging"),
+                .help("print verbose logging"),
         )
         .arg(
             Arg::new("debug")
                 .long("debug")
                 .short('d')
-                .about("print debug logging"),
+                .help("print debug logging"),
         )
         .arg(
             Arg::new("input")
                 .required(true)
                 .multiple(true)
-                .about("input C source files"),
+                .help("input C source files"),
         )
 }
 
